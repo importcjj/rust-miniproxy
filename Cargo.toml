@@ -6,4 +6,7 @@ edition = "2018"
 
 [dependencies.futures-preview]
 version = "=0.3.0-alpha.19"
-features = ["async-await", "compat"]
+features = ["compat"]
+
+[dependencies]
+tokio =  "=0.2.0-alpha.6"
