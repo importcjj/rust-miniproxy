@@ -1,0 +1,9 @@
+[package]
+name = "myproxy"
+version = "0.1.0"
+authors = ["importcjj <importcjj@gmail.com>"]
+edition = "2018"
+
+[dependencies.futures-preview]
+version = "=0.3.0-alpha.19"
+features = ["async-await", "compat"]
