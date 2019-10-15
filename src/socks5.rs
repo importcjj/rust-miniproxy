@@ -1,22 +1,23 @@
+use async_std::future::select;
 use async_std::net::TcpStream;
 use async_std::net::ToSocketAddrs;
 use async_std::prelude::*;
 
-use async_std::future::select;
-use futures::FutureExt;
-
+use crate::ciper;
 use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-pub async fn serve_socks5(mut stream: TcpStream) -> Result<()> {
+pub async fn serve_socks5(stream: TcpStream) -> Result<()> {
+    let mut stream = ciper::CiperTcpStream(stream);
     let mut buf = vec![0; 257];
     // SOCK5 协议详见 https://zh.wikipedia.org/wiki/SOCKS#SOCKS5
 
     // VER	NMETHODS	METHODS
     // 1	1	        1-255
+    // let _n = stream.read(&mut buf).await?;
     let _n = stream.read(&mut buf).await?;
 
     // VER	METHOD
@@ -76,8 +77,8 @@ pub async fn serve_socks5(mut stream: TcpStream) -> Result<()> {
     let (lr, lw) = &mut (&stream, &stream);
     let (tr, tw) = &mut (&target, &target);
 
-    let copy_a = async_std::io::copy(lr, tw).fuse();
-    let copy_b = async_std::io::copy(tr, lw).fuse();
+    let copy_a = async_std::io::copy(lr, tw);
+    let copy_b = async_std::io::copy(tr, lw);
 
     // 这里如果使用futures::select好像有问题
     // 所以使用async_std::future::select

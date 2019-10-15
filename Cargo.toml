@@ -22,4 +22,4 @@ features = ["async-await"]
 
 [dependencies.async-std]
 version = "0.99"
-# features = ["unstable"]
+features = ["unstable"]
