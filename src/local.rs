@@ -32,10 +32,11 @@ async fn serve_conn(mut stream: TcpStream) -> Result<()> {
             let mut path: Option<&str> = None;
             for h in req.headers {
                 if h.name == "Host" {
-                    path = Some(std::str::from_utf8(h.value).unwrap());
+                    path = Some(std::str::from_utf8(h.value)?);
                 }
             }
-            server_stream = req_socks5(server_stream, path.unwrap()).await?;
+            let path = path.unwrap_or("example.com");
+            server_stream = req_socks5(server_stream, path).await?;
             match req.method {
                 Some("CONNECT") => {
                     stream
