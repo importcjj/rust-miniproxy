@@ -6,6 +6,12 @@ use async_std::task::{Context, Poll};
 
 pub struct CiperTcpStream(pub TcpStream);
 
+impl CiperTcpStream {
+    pub fn into_inner(self) -> TcpStream {
+        self.0
+    }
+}
+
 impl io::Read for CiperTcpStream {
     fn poll_read(
         self: Pin<&mut Self>,

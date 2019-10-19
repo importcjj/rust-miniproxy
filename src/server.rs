@@ -2,6 +2,7 @@ use async_std::net::ToSocketAddrs;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
 
+use crate::ciper;
 use crate::socks5::serve_socks5;
 use crate::{spawn_and_log_err, Result};
 
@@ -17,6 +18,7 @@ pub async fn run_server(addr: impl ToSocketAddrs) -> Result<()> {
 }
 
 async fn serve_conn(stream: TcpStream) -> Result<()> {
+    let stream = ciper::CiperTcpStream(stream);
     serve_socks5(stream).await?;
     Ok(())
 }

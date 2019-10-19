@@ -1,17 +1,18 @@
 use async_std::future::select;
+use async_std::io::{Read, Write};
 use async_std::net::TcpStream;
 use async_std::net::ToSocketAddrs;
 use async_std::prelude::*;
 
-use crate::ciper;
-use byteorder::{BigEndian, ReadBytesExt};
+use crate::ciper::CiperTcpStream;
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
+use std::marker::Unpin;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-pub async fn serve_socks5(stream: TcpStream) -> Result<()> {
-    let mut stream = ciper::CiperTcpStream(stream);
+pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> {
     let mut buf = vec![0; 257];
     // SOCK5 协议详见 https://zh.wikipedia.org/wiki/SOCKS#SOCKS5
 
@@ -29,6 +30,9 @@ pub async fn serve_socks5(stream: TcpStream) -> Result<()> {
 
     let mut buf = vec![0; 1024];
     let n = stream.read(&mut buf).await?;
+    if n == 0 {
+        return Ok(stream);
+    }
     match buf[1] {
         // 0x01表示CONNECT请求
         0x01 => (),
@@ -84,5 +88,38 @@ pub async fn serve_socks5(stream: TcpStream) -> Result<()> {
     // 所以使用async_std::future::select
     select!(copy_a, copy_b).await?;
 
-    Ok(())
+    Ok(stream)
+}
+
+pub async fn req_socks5(mut stream: CiperTcpStream, path: &str) -> Result<CiperTcpStream> {
+    stream.write_all(&[0x05, 0x01, 0x00]).await?;
+    stream.read_exact(&mut [0; 2]).await?;
+    let mut data = vec![5, 1, 0];
+
+    match path.parse::<SocketAddr>() {
+        Ok(SocketAddr::V4(v4)) => {
+            data.push(0x01);
+            data.extend_from_slice(&v4.ip().octets());
+            data.write_u16::<BigEndian>(v4.port()).unwrap();
+        }
+        Ok(SocketAddr::V6(v6)) => {
+            data.push(0x05);
+            data.extend_from_slice(&v6.ip().octets());
+            data.write_u16::<BigEndian>(v6.port()).unwrap();
+        }
+        Err(_) => {
+            data.push(0x03);
+            println!("{:?}", path);
+            let mut parts = path.split(":");
+            let domain = parts.next().unwrap();
+            let port: u16 = parts.next().unwrap_or("80").parse().unwrap();
+            data.push(domain.as_bytes().len() as u8);
+            data.extend_from_slice(domain.as_bytes());
+            data.write_u16::<BigEndian>(port).unwrap();
+        }
+    }
+    stream.write_all(&data).await?;
+    stream.read(&mut [0; 1024]).await?;
+
+    Ok(stream)
 }
