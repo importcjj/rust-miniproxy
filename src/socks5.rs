@@ -30,7 +30,7 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
 
     let mut buf = vec![0; 1024];
     let n = stream.read(&mut buf).await?;
-    if n == 0 {
+    if n < 4 {
         return Ok(stream);
     }
     match buf[1] {

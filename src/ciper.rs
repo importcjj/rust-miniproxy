@@ -28,7 +28,15 @@ impl io::Read for &CiperTcpStream {
         cx: &mut Context,
         buf: &mut [u8],
     ) -> Poll<io::Result<usize>> {
-        Pin::new(&mut &(*self).0).poll_read(cx, buf)
+        match Pin::new(&mut &(*self).0).poll_read(cx, buf) {
+            ok @ Poll::Ready(Ok(_)) => {
+                for b in buf {
+                    *b = 255 - *b;
+                }
+                ok
+            }
+            r @ _ => r,
+        }
     }
 }
 
@@ -48,7 +56,8 @@ impl io::Write for CiperTcpStream {
 
 impl io::Write for &CiperTcpStream {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context, buf: &[u8]) -> Poll<io::Result<usize>> {
-        Pin::new(&mut &(*self).0).poll_write(cx, buf)
+        let buf: Vec<u8> = buf.iter().map(|b| 255 - *b).collect();
+        Pin::new(&mut &(*self).0).poll_write(cx, &buf)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context) -> Poll<io::Result<()>> {

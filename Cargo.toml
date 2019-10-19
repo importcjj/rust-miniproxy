@@ -12,6 +12,9 @@ path = "src/bin/local.rs"
 name = "server"
 path = "src/bin/server.rs"
 
+[target.'cfg(not(windows))'.dependencies]
+daemonize = "0.4.1"
+
 [dependencies]
 byteorder = "1.3.2"
 httparse = "1.3.4"
