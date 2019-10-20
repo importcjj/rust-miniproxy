@@ -30,15 +30,13 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
 
     let mut buf = vec![0; 1024];
     let n = stream.read(&mut buf).await?;
-    if n < 4 {
-        return Ok(stream);
-    }
+
     match buf[1] {
         // 0x01表示CONNECT请求
         0x01 => (),
         0x02 => (),
         0x03 => (),
-        _ => unreachable!(),
+        _ => return Ok(stream),
     }
 
     let port = Cursor::new(&buf[n - 2..n]).read_u16::<BigEndian>().unwrap();
@@ -66,7 +64,7 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
             )),
             port,
         ),
-        _ => unreachable!(),
+        _ => return Ok(stream),
     };
 
     // VER	REP	RSV	    ATYP	BND.ADDR	BND.PORT
