@@ -1,13 +1,12 @@
 use async_std::future::select;
-use async_std::io::{Read, Write};
 use async_std::net::TcpStream;
 use async_std::net::ToSocketAddrs;
 use async_std::prelude::*;
 
 use crate::ciper::CiperTcpStream;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use log;
 use std::io::Cursor;
-use std::marker::Unpin;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -73,7 +72,7 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
     stream.write_all(&[5, 0, 0, 1, 0, 0, 0, 0, 0, 0]).await?;
 
     // start to proxy.
-    println!("{:?}", addr);
+    log::info!("{:?}", addr);
     let target = TcpStream::connect(addr).await?;
 
     let (lr, lw) = &mut (&stream, &stream);
@@ -94,20 +93,23 @@ pub async fn req_socks5(mut stream: CiperTcpStream, path: &str) -> Result<CiperT
     stream.read_exact(&mut [0; 2]).await?;
     let mut data = vec![5, 1, 0];
 
+    println!("{:?}", path);
     match path.parse::<SocketAddr>() {
+        // IPV4
         Ok(SocketAddr::V4(v4)) => {
             data.push(0x01);
             data.extend_from_slice(&v4.ip().octets());
             data.write_u16::<BigEndian>(v4.port()).unwrap();
         }
+        // IPV6
         Ok(SocketAddr::V6(v6)) => {
             data.push(0x05);
             data.extend_from_slice(&v6.ip().octets());
             data.write_u16::<BigEndian>(v6.port()).unwrap();
         }
+        // domain
         Err(_) => {
             data.push(0x03);
-            println!("{:?}", path);
             let mut parts = path.split(":");
             let domain = parts.next().unwrap();
             let port: u16 = parts.next().unwrap_or("80").parse().unwrap();

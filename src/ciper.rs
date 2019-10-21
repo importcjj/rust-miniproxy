@@ -1,7 +1,6 @@
-use async_std::io::{self, Read, Write};
+use async_std::io;
 use async_std::net::TcpStream;
 use async_std::pin::Pin;
-use async_std::prelude::*;
 use async_std::task::{Context, Poll};
 
 pub struct CiperTcpStream(pub TcpStream);

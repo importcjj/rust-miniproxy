@@ -24,7 +24,7 @@ async fn serve_conn(mut stream: TcpStream) -> Result<()> {
 
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
-    let server_stream = TcpStream::connect("103.126.101.87:9999").await?;
+    let server_stream = TcpStream::connect("149.28.45.24:59999").await?;
     let mut server_stream = ciper::CiperTcpStream(server_stream);
 
     match req.parse(&buf[0..n]) {
@@ -49,7 +49,7 @@ async fn serve_conn(mut stream: TcpStream) -> Result<()> {
             }
         }
         // 解析失败 则直接理解为socks5代理
-        Err(err) => {
+        Err(_) => {
             server_stream.write_all(&buf[..n]).await?;
         }
     }

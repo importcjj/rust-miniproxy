@@ -1,11 +1,12 @@
 pub mod ciper;
+pub mod config;
+pub mod daemon;
 pub mod local;
 pub mod server;
 mod socks5;
 
 use async_std::future::Future;
 use async_std::task;
-use std::panic::UnwindSafe;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -15,7 +16,7 @@ where
 {
     task::spawn(async move {
         if let Err(e) = fut.await {
-            eprintln!("conn err: {:?}", e);
+            log::error!("conn err: {:?}", e);
         }
     })
 }
