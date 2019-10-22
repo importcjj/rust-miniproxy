@@ -5,7 +5,7 @@ use async_std::prelude::*;
 
 use crate::ciper::CiperTcpStream;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use log;
+use log::info;
 use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
@@ -72,7 +72,7 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
     stream.write_all(&[5, 0, 0, 1, 0, 0, 0, 0, 0, 0]).await?;
 
     // start to proxy.
-    log::info!("{:?}", addr);
+    info!("{:?}", addr);
     let target = TcpStream::connect(addr).await?;
 
     let (lr, lw) = &mut (&stream, &stream);
@@ -89,11 +89,11 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
 }
 
 pub async fn req_socks5(mut stream: CiperTcpStream, path: &str) -> Result<CiperTcpStream> {
+    info!("path {:?}", path);
     stream.write_all(&[0x05, 0x01, 0x00]).await?;
     stream.read_exact(&mut [0; 2]).await?;
     let mut data = vec![5, 1, 0];
 
-    println!("{:?}", path);
     match path.parse::<SocketAddr>() {
         // IPV4
         Ok(SocketAddr::V4(v4)) => {
