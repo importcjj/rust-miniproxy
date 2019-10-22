@@ -5,9 +5,9 @@ use std::fs;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LocalConfig {
+    pub host: Option<String>,
     pub port: Option<u16>,
-    pub server_host: Option<String>,
-    pub server_port: Option<u16>,
+    pub server: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -25,10 +25,28 @@ impl Default for ServerConfig {
     }
 }
 
+impl Default for LocalConfig {
+    fn default() -> Self {
+        Self {
+            host: Some("127.0.0.1".to_string()),
+            port: Some(9998),
+            server: None,
+        }
+    }
+}
+
 impl ServerConfig {
     pub fn load_from_file(path: &str) -> Result<ServerConfig> {
         let file = fs::OpenOptions::new().read(true).open(path)?;
         let config: ServerConfig = serde_json::from_reader(file)?;
+        Ok(config)
+    }
+}
+
+impl LocalConfig {
+    pub fn load_from_file(path: &str) -> Result<LocalConfig> {
+        let file = fs::OpenOptions::new().read(true).open(path)?;
+        let config: LocalConfig = serde_json::from_reader(file)?;
         Ok(config)
     }
 }

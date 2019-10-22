@@ -9,7 +9,7 @@ use log::info;
 
 pub async fn run_server(config: ServerConfig) -> Result<()> {
     let addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
-    info!("server {}", addr);
+    info!("server listening on {}...", addr);
     let server = TcpListener::bind(addr).await?;
     while let Some(stream) = server.incoming().next().await {
         let stream = stream?;

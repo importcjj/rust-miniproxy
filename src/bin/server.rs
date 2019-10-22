@@ -11,13 +11,14 @@ fn main() {
     env_logger::init();
     let matches = App::new(SERVER_NAME)
         .version(env!("CARGO_PKG_VERSION"))
-        .arg(Arg::with_name("host").short("h").long("host").help("host"))
-        .arg(Arg::with_name("port").short("p").long("port").help("port"))
+        .arg(Arg::with_name("host").short("h").long("host").value_name("HOST").help("host"))
+        .arg(Arg::with_name("port").short("p").long("port").value_name("PORT").help("port"))
         .arg(Arg::with_name("daemon").short("d").help("daemonize"))
         .arg(
             Arg::with_name("config")
                 .short("c")
                 .long("config")
+                .value_name("CONFIG")
                 .help("config path"),
         )
         .get_matches();
@@ -42,7 +43,7 @@ fn main() {
         config.port = match port.parse::<u16>() {
             Ok(port) => Some(port),
             Err(e) => {
-                error!("{:?}", e);
+                error!("invalid port {:?}", e);
                 return;
             }
         }

@@ -2,29 +2,34 @@ use async_std::future::select;
 use async_std::net::ToSocketAddrs;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
+use log::{error,info};
 
 use crate::ciper;
+use crate::config::LocalConfig;
 use crate::socks5::req_socks5;
 use crate::spawn_and_log_err;
 use crate::Result;
 
-pub async fn run_local(addr: impl ToSocketAddrs) -> Result<()> {
+pub async fn run_local(config: LocalConfig) -> Result<()> {
+    let addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
+    let remote_addr = config.server.unwrap();
+    info!("local listening on {}...", addr);
     let server = TcpListener::bind(addr).await?;
 
     while let Some(stream) = server.incoming().next().await {
         let stream = stream?;
-        spawn_and_log_err(serve_conn(stream));
+        spawn_and_log_err(serve_conn(remote_addr.clone(), stream));
     }
     Ok(())
 }
 
-async fn serve_conn(mut stream: TcpStream) -> Result<()> {
+async fn serve_conn(remote_addr: impl ToSocketAddrs, mut stream: TcpStream) -> Result<()> {
     let mut buf = vec![0_u8; 1024];
     let n = stream.read(&mut buf).await?;
 
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
-    let server_stream = TcpStream::connect("149.28.45.24:59999").await?;
+    let server_stream = TcpStream::connect(remote_addr).await?;
     let mut server_stream = ciper::CiperTcpStream(server_stream);
 
     match req.parse(&buf[0..n]) {
@@ -35,7 +40,13 @@ async fn serve_conn(mut stream: TcpStream) -> Result<()> {
                     path = Some(std::str::from_utf8(h.value)?);
                 }
             }
-            let path = path.unwrap_or("example.com");
+            let path = match path {
+                Some(p) => p,
+                None => {
+                    error!("invalid request");
+                    return Ok(())
+                }
+            };
             server_stream = req_socks5(server_stream, path).await?;
             match req.method {
                 Some("CONNECT") => {
