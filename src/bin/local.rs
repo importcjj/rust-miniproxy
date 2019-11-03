@@ -10,14 +10,33 @@ fn main() {
     env_logger::init();
     let matches = App::new(LOCAL_NAME)
         .version(env!("CARGO_PKG_VERSION"))
-        .arg(Arg::with_name("host").short("h").long("host").value_name("HOST").help("host"))
-        .arg(Arg::with_name("port").short("p").long("port").value_name("PORT").help("port"))
+        .arg(
+            Arg::with_name("host")
+                .short("h")
+                .long("host")
+                .value_name("HOST")
+                .help("host"),
+        )
+        .arg(
+            Arg::with_name("port")
+                .short("p")
+                .long("port")
+                .value_name("PORT")
+                .help("port"),
+        )
         .arg(
             Arg::with_name("server")
                 .short("s")
                 .long("server")
                 .value_name("SERVER")
                 .help("server address"),
+        )
+        .arg(
+            Arg::with_name("password")
+                .short("P")
+                .long("password")
+                .value_name("PASSWORD")
+                .help("ciper password"),
         )
         .arg(Arg::with_name("daemon").short("d").help("daemonize"))
         .arg(
@@ -59,8 +78,17 @@ fn main() {
         config.server = Some(server.to_string());
     }
 
+    if let Some(password) = matches.value_of("password") {
+        config.password = Some(password.to_string());
+    }
+
     if config.server.is_none() {
         error!("server address required");
+        return;
+    }
+
+    if config.password.is_none() {
+        error!("password required");
         return;
     }
 

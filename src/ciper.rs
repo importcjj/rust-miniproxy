@@ -3,11 +3,23 @@ use async_std::net::TcpStream;
 use async_std::pin::Pin;
 use async_std::task::{Context, Poll};
 
-pub struct CiperTcpStream(pub TcpStream);
+pub struct CiperTcpStream {
+    stream: TcpStream,
+    decode_password: Vec<u8>,
+    encode_password: Vec<u8>,
+}
 
 impl CiperTcpStream {
-    pub fn into_inner(self) -> TcpStream {
-        self.0
+    pub fn new(stream: TcpStream, encode_password: Vec<u8>) -> CiperTcpStream {
+        let mut decode_password = vec![0; 256];
+        for (i, b) in encode_password.iter().enumerate() {
+            decode_password[*b as usize] = i as u8;
+        }
+        CiperTcpStream {
+            stream,
+            encode_password,
+            decode_password,
+        }
     }
 }
 
@@ -27,10 +39,10 @@ impl io::Read for &CiperTcpStream {
         cx: &mut Context,
         buf: &mut [u8],
     ) -> Poll<io::Result<usize>> {
-        match Pin::new(&mut &(*self).0).poll_read(cx, buf) {
+        match Pin::new(&mut &(*self).stream).poll_read(cx, buf) {
             ok @ Poll::Ready(Ok(_)) => {
                 for b in buf {
-                    *b = 255 - *b;
+                    *b = self.decode_password[*b as usize];
                 }
                 ok
             }
@@ -55,15 +67,18 @@ impl io::Write for CiperTcpStream {
 
 impl io::Write for &CiperTcpStream {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context, buf: &[u8]) -> Poll<io::Result<usize>> {
-        let buf: Vec<u8> = buf.iter().map(|b| 255 - *b).collect();
-        Pin::new(&mut &(*self).0).poll_write(cx, &buf)
+        let buf: Vec<u8> = buf
+            .iter()
+            .map(|b| self.encode_password[*b as usize])
+            .collect();
+        Pin::new(&mut &(*self).stream).poll_write(cx, &buf)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context) -> Poll<io::Result<()>> {
-        Pin::new(&mut &(*self).0).poll_flush(cx)
+        Pin::new(&mut &(*self).stream).poll_flush(cx)
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context) -> Poll<io::Result<()>> {
-        Pin::new(&mut &(*self).0).poll_close(cx)
+        Pin::new(&mut &(*self).stream).poll_close(cx)
     }
 }

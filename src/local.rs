@@ -2,10 +2,11 @@ use async_std::future::select;
 use async_std::net::ToSocketAddrs;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
-use log::{error,info};
+use log::{error, info};
 
-use crate::ciper;
+use crate::ciper::CiperTcpStream;
 use crate::config::LocalConfig;
+use crate::password::decode_password;
 use crate::socks5::req_socks5;
 use crate::spawn_and_log_err;
 use crate::Result;
@@ -13,24 +14,30 @@ use crate::Result;
 pub async fn run_local(config: LocalConfig) -> Result<()> {
     let addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
     let remote_addr = config.server.unwrap();
+    let password = config.password.unwrap();
     info!("local listening on {}...", addr);
-    let server = TcpListener::bind(addr).await?;
 
+    let password = decode_password(&password)?;
+    let server = TcpListener::bind(addr).await?;
     while let Some(stream) = server.incoming().next().await {
         let stream = stream?;
-        spawn_and_log_err(serve_conn(remote_addr.clone(), stream));
+        spawn_and_log_err(serve_conn(remote_addr.clone(), stream, password.clone()));
     }
     Ok(())
 }
 
-async fn serve_conn(remote_addr: impl ToSocketAddrs, mut stream: TcpStream) -> Result<()> {
+async fn serve_conn(
+    remote_addr: impl ToSocketAddrs,
+    mut stream: TcpStream,
+    password: Vec<u8>,
+) -> Result<()> {
     let mut buf = vec![0_u8; 1024];
     let n = stream.read(&mut buf).await?;
 
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
     let server_stream = TcpStream::connect(remote_addr).await?;
-    let mut server_stream = ciper::CiperTcpStream(server_stream);
+    let mut server_stream = CiperTcpStream::new(server_stream, password);
 
     match req.parse(&buf[0..n]) {
         Ok(_) => {
@@ -44,7 +51,7 @@ async fn serve_conn(remote_addr: impl ToSocketAddrs, mut stream: TcpStream) -> R
                 Some(p) => p,
                 None => {
                     error!("invalid request");
-                    return Ok(())
+                    return Ok(());
                 }
             };
             server_stream = req_socks5(server_stream, path).await?;

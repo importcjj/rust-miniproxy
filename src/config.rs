@@ -1,3 +1,4 @@
+use crate::password;
 use crate::Result;
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -8,12 +9,14 @@ pub struct LocalConfig {
     pub host: Option<String>,
     pub port: Option<u16>,
     pub server: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ServerConfig {
     pub host: Option<String>,
     pub port: Option<u16>,
+    pub password: Option<String>,
 }
 
 impl Default for ServerConfig {
@@ -21,6 +24,7 @@ impl Default for ServerConfig {
         Self {
             host: Some("0.0.0.0".to_string()),
             port: Some(59999),
+            password: Some(password::new()),
         }
     }
 }
@@ -31,6 +35,7 @@ impl Default for LocalConfig {
             host: Some("127.0.0.1".to_string()),
             port: Some(9998),
             server: None,
+            password: None,
         }
     }
 }

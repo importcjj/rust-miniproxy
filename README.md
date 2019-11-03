@@ -16,16 +16,16 @@ cargo build --release
 
 本代理分为两部分：`minilocal`和`miniserver`。`miniserver`运行于网络服务器上，`minilocal`运行于本地。
 
-a. 先在服务器上部署`miniserver`
+a. 先在服务器上部署`miniserver`，启动的时候会随机产生一个base64编码的密码
 
 ```
 miniserver -h 0.0.0.0 -p 59999 -d
 ```
 
-b. 然后在本地启动`minilocal`
+b. 然后在本地启动`minilocal`，需要指定server的通讯密码
 
 ```
-minilocal -s "xxx.xx.xx.xx:59999" -p 9998
+minilocal -s "xxx.xx.xx.xx:59999" -p 9998 -P xxxxxx
 ```
 
 c. 进行系统代理设定，代理地址为`127.0.0.0:9998`，本代理同时支持HTTP，HTTPS和SOCKS5协议
