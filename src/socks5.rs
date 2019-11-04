@@ -1,13 +1,10 @@
-use async_std::future::timeout;
 use async_std::net::TcpStream;
 use async_std::net::ToSocketAddrs;
 use async_std::prelude::*;
-use futures::FutureExt;
-use std::time::Duration;
 
 use crate::ciper::CiperTcpStream;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use log::{debug, error, info};
+use log::info;
 use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
