@@ -5,7 +5,7 @@
 ## 如何编译
 
 首先安装Rust，如何安装请移步[官网](https://www.rust-lang.org/learn/get-started)
-注意由于需要使用async/await，所以需要制定rust版本为1.39(nightly)
+注意由于需要使用async/await，所以需要指定rust版本为1.39(nightly)
 
 ```sh
 cargo build --release
