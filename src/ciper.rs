@@ -2,6 +2,7 @@ use async_std::io;
 use async_std::net::TcpStream;
 use async_std::pin::Pin;
 use async_std::task::{Context, Poll};
+use log::debug;
 
 pub struct CiperTcpStream {
     stream: TcpStream,
@@ -39,6 +40,7 @@ impl io::Read for &CiperTcpStream {
         cx: &mut Context,
         buf: &mut [u8],
     ) -> Poll<io::Result<usize>> {
+        debug!("read");
         match Pin::new(&mut &(*self).stream).poll_read(cx, buf) {
             ok @ Poll::Ready(Ok(_)) => {
                 for b in buf {
@@ -67,6 +69,7 @@ impl io::Write for CiperTcpStream {
 
 impl io::Write for &CiperTcpStream {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context, buf: &[u8]) -> Poll<io::Result<usize>> {
+        debug!("write");
         let buf: Vec<u8> = buf
             .iter()
             .map(|b| self.encode_password[*b as usize])

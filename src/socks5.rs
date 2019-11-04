@@ -1,17 +1,19 @@
-use async_std::future::select;
+use async_std::future::timeout;
 use async_std::net::TcpStream;
 use async_std::net::ToSocketAddrs;
 use async_std::prelude::*;
+use futures::FutureExt;
+use std::time::Duration;
 
 use crate::ciper::CiperTcpStream;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use log::info;
+use log::{debug, error, info};
 use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> {
+pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<()> {
     let mut buf = vec![0; 257];
     // SOCK5 协议详见 https://zh.wikipedia.org/wiki/SOCKS#SOCKS5
 
@@ -35,7 +37,7 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
         0x01 => (),
         0x02 => (),
         0x03 => (),
-        _ => return Ok(stream),
+        _ => return Ok(()),
     }
 
     let port = Cursor::new(&buf[n - 2..n]).read_u16::<BigEndian>().unwrap();
@@ -63,7 +65,7 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
             )),
             port,
         ),
-        _ => return Ok(stream),
+        _ => return Ok(()),
     };
 
     // VER	REP	RSV	    ATYP	BND.ADDR	BND.PORT
@@ -72,8 +74,8 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
     stream.write_all(&[5, 0, 0, 1, 0, 0, 0, 0, 0, 0]).await?;
 
     // start to proxy.
-    info!("{:?}", addr);
-    let target = TcpStream::connect(addr).await?;
+    info!("connecting {:?}", addr);
+    let target = TcpStream::connect(addr.clone()).await?;
 
     let (lr, lw) = &mut (&stream, &stream);
     let (tr, tw) = &mut (&target, &target);
@@ -81,11 +83,22 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<CiperTcpStream> 
     let copy_a = async_std::io::copy(lr, tw);
     let copy_b = async_std::io::copy(tr, lw);
 
+    async_std::future::select!(copy_a, copy_b).await?;
+
     // 这里如果使用futures::select好像有问题
     // 所以使用async_std::future::select
-    select!(copy_a, copy_b).await?;
+    // select!(copy_a, copy_b).await?;
+    // match r1 {
+    //     Ok(n) => info!("Send {} bytes to {:?}", n, addr),
+    //     Err(e) => error!("Failed to send to {:?}: {:?}", addr, e),
+    // }
 
-    Ok(stream)
+    // match r2 {
+    //     Ok(n) => info!("Receive {} bytes from {:?}", n, addr),
+    //     Err(e) => error!("Failed to send to minilocal: {:?}", e),
+    // }
+
+    Ok(())
 }
 
 pub async fn req_socks5(mut stream: CiperTcpStream, path: &str) -> Result<CiperTcpStream> {

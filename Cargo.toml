@@ -31,6 +31,6 @@ version = "=0.3.0-alpha.19"
 features = ["async-await"]
 
 [dependencies.async-std]
-version = "0.99"
+version = "0.99.11"
 features = ["unstable"]
 
