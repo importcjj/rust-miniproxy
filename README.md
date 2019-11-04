@@ -1,10 +1,11 @@
 # miniproxy
 
-使用Rust实现的简易代理，同时支持HTTP，HTTPS和SOCKS5协议，支持仅用于学习交流。
+使用Rust实现的简易代理，同时支持HTTP，HTTPS和SOCKS5协议。本项目仅用于学习交流。
 
 ## 如何编译
 
 首先安装Rust，如何安装请移步[官网](https://www.rust-lang.org/learn/get-started)
+注意由于需要使用async/await，所以需要制定rust版本为1.39(nightly)
 
 ```sh
 cargo build --release
@@ -19,13 +20,13 @@ cargo build --release
 a. 先在服务器上部署`miniserver`，启动的时候会随机产生一个base64编码的密码
 
 ```
-miniserver -h 0.0.0.0 -p 59999 -d
+RUST_LOG=mini=info miniserver -h 0.0.0.0 -p 59999 -d
 ```
 
 b. 然后在本地启动`minilocal`，需要指定server的通讯密码
 
 ```
-minilocal -s "xxx.xx.xx.xx:59999" -p 9998 -P xxxxxx
+RUST_LOG=mini=info  minilocal -s "xxx.xx.xx.xx:59999" -p 9998 -P xxxxxx
 ```
 
 c. 进行系统代理设定，代理地址为`127.0.0.0:9998`，本代理同时支持HTTP，HTTPS和SOCKS5协议
