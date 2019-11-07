@@ -54,6 +54,9 @@ async fn serve_conn(
                     return Ok(());
                 }
             };
+            if path.contains("127.0.0.1") {
+                return Ok(())
+            }
             server_stream = req_socks5(server_stream, path).await?;
             match req.method {
                 Some("CONNECT") => {
