@@ -2,10 +2,11 @@ use async_std::future::select;
 use async_std::net::ToSocketAddrs;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
-use log::{error, info};
+use log::{debug, error, info};
 
 use crate::ciper::CiperTcpStream;
 use crate::config::LocalConfig;
+use crate::pac::serve_pac_file;
 use crate::password::decode_password;
 use crate::socks5::req_socks5;
 use crate::spawn_and_log_err;
@@ -41,23 +42,36 @@ async fn serve_conn(
 
     match req.parse(&buf[0..n]) {
         Ok(_) => {
-            let mut path: Option<&str> = None;
+            let mut host: Option<&str> = None;
+            debug!("req {:?}", req);
             for h in req.headers {
                 if h.name == "Host" {
-                    path = Some(std::str::from_utf8(h.value)?);
+                    host = Some(std::str::from_utf8(h.value)?);
                 }
             }
-            let path = match path {
-                Some(p) => p,
+            let host = match host {
+                Some(h) => h,
                 None => {
                     error!("invalid request");
                     return Ok(());
                 }
             };
-            if path.contains("127.0.0.1") {
-                return Ok(())
+
+            // Serve pac file
+            if let Some(path) = req.path {
+                if path == "/pac" {
+                    return serve_pac_file(stream).await;
+                }
             }
-            server_stream = req_socks5(server_stream, path).await?;
+
+            // Do nothing
+            if host.contains("127.0.0.1") {
+                return Ok(());
+            }
+
+            info!("{}", host);
+
+            server_stream = req_socks5(server_stream, host).await?;
             match req.method {
                 Some("CONNECT") => {
                     stream

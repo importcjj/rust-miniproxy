@@ -1,8 +1,8 @@
-use log::{error, info, warn};
+use log::{error, info};
 
 #[cfg(target_os = "windows")]
 pub fn set_daemon(name: &str) {
-    warn!("can't be daemonized on windows yet!");
+    log::warn!("can't be daemonized on windows yet!");
 }
 
 #[cfg(not(target_os = "windows"))]

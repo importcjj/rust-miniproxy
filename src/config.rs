@@ -43,7 +43,7 @@ impl Default for LocalConfig {
 impl ServerConfig {
     pub fn load_from_file(path: &str) -> Result<ServerConfig> {
         let file = fs::OpenOptions::new().read(true).open(path)?;
-        let mut config: ServerConfig = serde_json::from_reader(file)?;
+        let config: ServerConfig = serde_json::from_reader(file)?;
         Ok(config)
     }
 }

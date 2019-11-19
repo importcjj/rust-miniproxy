@@ -2,6 +2,7 @@ pub mod ciper;
 pub mod config;
 pub mod daemon;
 pub mod local;
+mod pac;
 pub mod password;
 pub mod server;
 mod socks5;
