@@ -16,7 +16,9 @@ pub async fn run_local(config: LocalConfig) -> Result<()> {
     let addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
     let remote_addr = config.server.unwrap();
     let password = config.password.unwrap();
-    info!("local listening on {}...", addr);
+    info!("MINILOCAL listening on {}", addr);
+    info!("Serve [ HTTP | HTTPS | SOCKS5 ]");
+    info!("PAC url http://{}/pac", addr);
 
     let password = decode_password(&password)?;
     let server = TcpListener::bind(addr).await?;

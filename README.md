@@ -31,7 +31,7 @@ b. 然后在本地启动`minilocal`，需要指定server的通讯密码
 RUST_LOG=mini=info ./minilocal -s "xxx.xx.xx.xx:59999" -p 9998 -P xxxxxx
 ```
 
-c. 进行系统代理设定，代理地址为`127.0.0.0:9998`，本代理同时支持HTTP，HTTPS和SOCKS5协议
+c. 进行系统代理设定，代理地址为`127.0.0.0:9998`，或者也可以设置自动代理，PAC文件地址为`http://127.0.0.1:9998/pac`。本代理同时支持HTTP，HTTPS和SOCKS5协议
 
 ## 原理及教程
 
