@@ -1,11 +1,12 @@
-use async_std::net::TcpListener;
-use async_std::prelude::*;
-
 use crate::ciper::CiperTcpStream;
 use crate::config::ServerConfig;
 use crate::password::decode_password;
 use crate::socks5::serve_socks5;
 use crate::{spawn_and_log_err, Result};
+use async_std::io::{Read, Write};
+use async_std::net::TcpListener;
+use async_std::net::TcpStream;
+use async_std::prelude::*;
 use log::info;
 
 pub async fn run_server(config: ServerConfig) -> Result<()> {
@@ -25,7 +26,7 @@ pub async fn run_server(config: ServerConfig) -> Result<()> {
     Ok(())
 }
 
-async fn serve_conn(stream: CiperTcpStream) -> Result<()> {
+async fn serve_conn(stream: CiperTcpStream<TcpStream>) -> Result<()> {
     serve_socks5(stream).await?;
     Ok(())
 }

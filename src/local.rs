@@ -1,5 +1,3 @@
-use async_std::future::select;
-use async_std::net::ToSocketAddrs;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
 use log::{debug, error, info};
@@ -11,6 +9,9 @@ use crate::password::decode_password;
 use crate::socks5::req_socks5;
 use crate::spawn_and_log_err;
 use crate::Result;
+use futures::future::FutureExt;
+use gkd::client::Client;
+use gkd::connection::Connection;
 
 pub async fn run_local(config: LocalConfig) -> Result<()> {
     let addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
@@ -21,16 +22,21 @@ pub async fn run_local(config: LocalConfig) -> Result<()> {
     info!("PAC url http://{}/pac", addr);
 
     let password = decode_password(&password)?;
+    let gkd_client = Client::new("103.126.101.87:9990", 8).await?;
+
     let server = TcpListener::bind(addr).await?;
     while let Some(stream) = server.incoming().next().await {
         let stream = stream?;
-        spawn_and_log_err(serve_conn(remote_addr.clone(), stream, password.clone()));
+        // let conn_to_server = TcpStream::connect(remote_addr.clone()).await?;
+        let conn_to_server = gkd_client.connect(remote_addr.clone()).await?;
+        spawn_and_log_err(serve_conn(conn_to_server, stream, password.clone()));
     }
     Ok(())
 }
 
 async fn serve_conn(
-    remote_addr: impl ToSocketAddrs,
+    conn_to_server: Connection,
+    // conn_to_server: TcpStream,
     mut stream: TcpStream,
     password: Vec<u8>,
 ) -> Result<()> {
@@ -39,8 +45,8 @@ async fn serve_conn(
 
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
-    let server_stream = TcpStream::connect(remote_addr).await?;
-    let mut server_stream = CiperTcpStream::new(server_stream, password);
+
+    let mut server_stream = CiperTcpStream::new(conn_to_server, password);
 
     match req.parse(&buf[0..n]) {
         Ok(_) => {
@@ -96,7 +102,10 @@ async fn serve_conn(
 
     let copy_a = async_std::io::copy(lr, tw);
     let copy_b = async_std::io::copy(tr, lw);
-    select!(copy_a, copy_b).await?;
+    let r = futures::select! {
+        r1 = copy_a.fuse() => r1,
+        r2 = copy_b.fuse() => r2
+    };
 
     Ok(())
 }

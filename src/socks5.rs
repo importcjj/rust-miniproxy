@@ -1,16 +1,17 @@
+use crate::ciper::CiperTcpStream;
+use async_std::io::{Read, Write};
 use async_std::net::TcpStream;
 use async_std::net::ToSocketAddrs;
 use async_std::prelude::*;
-
-use crate::ciper::CiperTcpStream;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use futures::future::FutureExt;
 use log::info;
 use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<()> {
+pub async fn serve_socks5(mut stream: CiperTcpStream<TcpStream>) -> Result<()> {
     let mut buf = vec![0; 257];
     // SOCK5 协议详见 https://zh.wikipedia.org/wiki/SOCKS#SOCKS5
 
@@ -80,7 +81,10 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<()> {
     let copy_a = async_std::io::copy(lr, tw);
     let copy_b = async_std::io::copy(tr, lw);
 
-    async_std::future::select!(copy_a, copy_b).await?;
+    futures::select! {
+        r1 = copy_a.fuse() => r1?,
+        r2 = copy_b.fuse() => r2?
+    };
 
     // 这里如果使用futures::select好像有问题
     // 所以使用async_std::future::select
@@ -98,8 +102,11 @@ pub async fn serve_socks5(mut stream: CiperTcpStream) -> Result<()> {
     Ok(())
 }
 
-pub async fn req_socks5(mut stream: CiperTcpStream, path: &str) -> Result<CiperTcpStream> {
-    stream.write_all(&[0x05, 0x01, 0x00]).await?;
+pub async fn req_socks5<T>(mut stream: T, path: &str) -> Result<T>
+where
+    T: Read + Write + Unpin,
+{
+    stream.write_all(&[5, 1, 0]).await?;
     stream.read_exact(&mut [0; 2]).await?;
     let mut data = vec![5, 1, 0];
 
