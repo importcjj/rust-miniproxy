@@ -1,4 +1,3 @@
-use crate::ciper::CiperTcpStream;
 use async_std::io::{Read, Write};
 use async_std::net::TcpStream;
 use async_std::net::ToSocketAddrs;
@@ -8,10 +7,13 @@ use futures::future::FutureExt;
 use log::info;
 use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-pub async fn serve_socks5(mut stream: CiperTcpStream<TcpStream>) -> Result<()> {
+pub async fn serve_socks5<T>(mut stream: T) -> Result<()>
+where
+    T: Read + Write + Unpin,
+    for<'a> &'a T: Read + Write + Unpin,
+{
     let mut buf = vec![0; 257];
     // SOCK5 协议详见 https://zh.wikipedia.org/wiki/SOCKS#SOCKS5
 
@@ -85,19 +87,6 @@ pub async fn serve_socks5(mut stream: CiperTcpStream<TcpStream>) -> Result<()> {
         r1 = copy_a.fuse() => r1?,
         r2 = copy_b.fuse() => r2?
     };
-
-    // 这里如果使用futures::select好像有问题
-    // 所以使用async_std::future::select
-    // select!(copy_a, copy_b).await?;
-    // match r1 {
-    //     Ok(n) => info!("Send {} bytes to {:?}", n, addr),
-    //     Err(e) => error!("Failed to send to {:?}: {:?}", addr, e),
-    // }
-
-    // match r2 {
-    //     Ok(n) => info!("Receive {} bytes from {:?}", n, addr),
-    //     Err(e) => error!("Failed to send to minilocal: {:?}", e),
-    // }
 
     Ok(())
 }

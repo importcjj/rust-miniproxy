@@ -9,9 +9,8 @@ use crate::password::decode_password;
 use crate::socks5::req_socks5;
 use crate::spawn_and_log_err;
 use crate::Result;
+use async_std::io::{Read, Write};
 use futures::future::FutureExt;
-use gkd::client::Client;
-use gkd::connection::Connection;
 
 pub async fn run_local(config: LocalConfig) -> Result<()> {
     let addr = format!("{}:{}", config.host.unwrap(), config.port.unwrap());
@@ -22,31 +21,43 @@ pub async fn run_local(config: LocalConfig) -> Result<()> {
     info!("PAC url http://{}/pac", addr);
 
     let password = decode_password(&password)?;
-    let gkd_client = Client::new("103.126.101.87:9990", 8).await?;
+
+    #[cfg(feature = "gkd")]
+    let gkd_client = {
+        info!("powered by gkd-rs");
+        use gkd::Client;
+        Client::connect(&remote_addr.clone(), 8).await?
+    };
 
     let server = TcpListener::bind(addr).await?;
     while let Some(stream) = server.incoming().next().await {
         let stream = stream?;
-        // let conn_to_server = TcpStream::connect(remote_addr.clone()).await?;
-        let conn_to_server = gkd_client.connect(remote_addr.clone()).await?;
-        spawn_and_log_err(serve_conn(conn_to_server, stream, password.clone()));
+
+        #[cfg(feature = "gkd")]
+        let conn_to_server = gkd_client.get_connection().await?;
+        #[cfg(not(feature = "gkd"))]
+        let conn_to_server = TcpStream::connect(remote_addr.clone()).await?;
+
+        let server_stream = CiperTcpStream::new(conn_to_server, password.clone());
+        spawn_and_log_err(serve_conn(server_stream, stream));
     }
     Ok(())
 }
 
-async fn serve_conn(
-    conn_to_server: Connection,
+async fn serve_conn<T>(
+    mut server_stream: T,
     // conn_to_server: TcpStream,
     mut stream: TcpStream,
-    password: Vec<u8>,
-) -> Result<()> {
+) -> Result<()>
+where
+    T: Read + Write + Unpin,
+    for<'a> &'a T: Read + Write + Unpin,
+{
     let mut buf = vec![0_u8; 1024];
     let n = stream.read(&mut buf).await?;
 
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
-
-    let mut server_stream = CiperTcpStream::new(conn_to_server, password);
 
     match req.parse(&buf[0..n]) {
         Ok(_) => {

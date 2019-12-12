@@ -13,6 +13,9 @@
 cargo build --release
 ```
 
+默认开启TCP加速，使用[gkd-rs](https://github.com/importcjj/gkd-rs)提供加速功能。
+可在编译时使用--no-default-features关闭加速功能。
+
 二进制文件会在项目目录的target/release文件夹下，找到两个名为`minilocal`和`miniserver`的二进制文件即可。关于如何交叉编译，请自行搜索。不过我自己在macbook上交叉编译就没成功过。
 
 ## 如何使用
