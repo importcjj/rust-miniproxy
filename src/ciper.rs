@@ -58,7 +58,7 @@ impl Read for &CiperTcpStream {
         cx: &mut Context,
         buf: &mut [u8],
     ) -> Poll<io::Result<usize>> {
-        debug!("read");
+        // debug!("read");
         match Pin::new(&mut &self.stream).poll_read(cx, buf) {
             ok @ Poll::Ready(Ok(_)) => {
                 for b in buf {
@@ -87,7 +87,7 @@ impl Write for CiperTcpStream {
 
 impl Write for &CiperTcpStream {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context, buf: &[u8]) -> Poll<io::Result<usize>> {
-        debug!("write");
+        // debug!("write");
         let buf: Vec<u8> = buf
             .iter()
             .map(|b| self.encode_password[*b as usize])

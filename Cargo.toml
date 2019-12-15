@@ -28,7 +28,8 @@ env_logger = "0.7.1"
 clap = "2.33.0"
 base64 = "0.11.0"
 rand = "0.7.2"
-gkd = { version = "0.1.0", git = "https://github.com/importcjj/gkd-rs", optional = true}
+# gkd = { version = "0.1.0", git = "https://github.com/importcjj/gkd-rs", optional = true}
+gkd = { version = "0.1.0", path = "../gkd-rs", optional = true}
 
 [dependencies.futures]
 version = "0.3"

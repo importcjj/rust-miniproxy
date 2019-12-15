@@ -26,7 +26,7 @@ pub async fn run_local(config: LocalConfig) -> Result<()> {
     let gkd_client = {
         info!("powered by gkd-rs");
         use gkd::Client;
-        Client::connect(&remote_addr.clone(), 8).await?
+        Client::connect(&remote_addr.clone(), 2).await?
     };
 
     let server = TcpListener::bind(addr).await?;
